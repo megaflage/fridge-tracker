@@ -1,6 +1,6 @@
 "use server";
 
-import { getFridgeItems, addFridgeItem, removeFridgeItem } from "@/lib/dbAdd";
+import { getFridgeItems, addFridgeItem, removeFridgeItem, updateFridgeItem } from "@/lib/dbAdd";
 import { InsertFridgeItem } from "@/app/src/db/schema";
 
 export async function getItems() {
@@ -36,6 +36,19 @@ export async function addItem(formData: { name: string; expiryDate: string }) {
   } catch (error) {
     console.error("Error adding fridge item:", error);
     return { success: false, error: "Failed to add fridge item" };
+  }
+}
+
+export async function updateItem(
+  id: number,
+  updates: { eatenStatus?: "fresh" | "half eaten" | "nearly eaten" | "eaten" }
+) {
+  try {
+    await updateFridgeItem(id, updates);
+    return { success: true };
+  } catch (error) {
+    console.error("Error updating fridge item:", error);
+    return { success: false, error: "Failed to update fridge item" };
   }
 }
 

@@ -13,3 +13,13 @@ export async function removeFridgeItem(id: number){
 export async function getFridgeItems(){
     return await db.select().from(fridgeItems);
 }
+
+export async function updateFridgeItem(
+    id: number, 
+    updates: Partial<Pick<InsertFridgeItem, 'eatenStatus' | 'name' | 'expiryDate'>>
+){
+    await db
+        .update(fridgeItems)
+        .set({ ...updates, updatedAt: new Date() })
+        .where(eq(fridgeItems.id, id));
+}

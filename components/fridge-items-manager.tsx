@@ -8,8 +8,22 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card } from "@/components/ui/card";
-import { getItems, addItem, deleteItem } from "@/app/actions/fridge-items";
-import { Trash2 } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { Progress } from "@/components/ui/progress";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  getItems,
+  addItem,
+  deleteItem,
+  updateItem,
+} from "@/app/actions/fridge-items";
+import { Trash2, Clock, Calendar } from "lucide-react";
 
 interface FridgeItem {
   id: number;
@@ -56,6 +70,25 @@ export function FridgeItemsManager() {
     },
   });
 
+  const updateItemMutation = useMutation({
+    mutationFn: async ({
+      id,
+      eatenStatus,
+    }: {
+      id: number;
+      eatenStatus: "fresh" | "half eaten" | "nearly eaten" | "eaten";
+    }) => {
+      const result = await updateItem(id, { eatenStatus });
+      if (!result.success) {
+        throw new Error(result.error || "Failed to update item");
+      }
+      return result;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["fridge-items"] });
+    },
+  });
+
   const deleteItemMutation = useMutation({
     mutationFn: async (id: number) => {
       const result = await deleteItem(id);
@@ -96,6 +129,46 @@ export function FridgeItemsManager() {
     if (daysUntilExpiry <= 3) return "critical";
     if (daysUntilExpiry <= 7) return "warning";
     return "fresh";
+  };
+
+  const getEatenStatusConfig = (status: FridgeItem["eatenStatus"]) => {
+    switch (status) {
+      case "fresh":
+        return {
+          label: "Fresh",
+          progress: 0,
+          color: "bg-green-500",
+          badgeVariant: "default" as const,
+        };
+      case "half eaten":
+        return {
+          label: "Half Eaten",
+          progress: 50,
+          color: "bg-yellow-500",
+          badgeVariant: "secondary" as const,
+        };
+      case "nearly eaten":
+        return {
+          label: "Nearly Eaten",
+          progress: 90,
+          color: "bg-orange-500",
+          badgeVariant: "outline" as const,
+        };
+      case "eaten":
+        return {
+          label: "Eaten",
+          progress: 100,
+          color: "bg-gray-500",
+          badgeVariant: "outline" as const,
+        };
+      default:
+        return {
+          label: "Fresh",
+          progress: 0,
+          color: "bg-green-500",
+          badgeVariant: "default" as const,
+        };
+    }
   };
 
   return (
@@ -204,10 +277,18 @@ export function FridgeItemsManager() {
                   year: "numeric",
                 });
 
+                const eatenConfig = getEatenStatusConfig(item.eatenStatus);
+                const expiryLabel =
+                  daysUntilExpiry < 0
+                    ? `Expired ${Math.abs(daysUntilExpiry)}d ago`
+                    : daysUntilExpiry === 0
+                    ? "Expires today"
+                    : `${daysUntilExpiry}d remaining`;
+
                 return (
                   <Card
                     key={item.id}
-                    className={`border-2 bg-card p-4 transition-all hover:border-foreground ${
+                    className={`border-2 bg-card p-5 transition-all hover:border-foreground ${
                       status === "expired" || status === "critical"
                         ? "border-destructive"
                         : status === "warning"
@@ -215,36 +296,91 @@ export function FridgeItemsManager() {
                         : "border-border"
                     }`}
                   >
-                    <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-                      <div className="space-y-1">
-                        <h3 className="font-mono text-xl font-bold">
-                          {item.name}
-                        </h3>
-                        <p className="font-mono text-sm text-muted-foreground">
-                          {expiryDateFormatted}
-                        </p>
-                      </div>
-                      <div className="flex items-center gap-4">
-                        <div className="text-right">
-                          <p className="font-mono text-sm font-bold uppercase tracking-wider">
-                            {daysUntilExpiry < 0
-                              ? `Expired ${Math.abs(daysUntilExpiry)}d ago`
-                              : daysUntilExpiry === 0
-                              ? "Expires today"
-                              : `${daysUntilExpiry}d remaining`}
-                          </p>
+                    <div className="space-y-4">
+                      {/* Header Row */}
+                      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                        <div className="flex-1 space-y-2">
+                          <h3 className="font-mono text-xl font-bold">
+                            {item.name}
+                          </h3>
+
+                          {/* Expiry Info */}
+                          <div className="flex flex-wrap items-center gap-3 text-sm">
+                            <div className="flex items-center gap-1.5 text-muted-foreground">
+                              <Calendar className="h-4 w-4" />
+                              <span className="font-mono">
+                                {expiryDateFormatted}
+                              </span>
+                            </div>
+                            <div className="flex items-center gap-1.5">
+                              <Clock className="h-4 w-4 text-muted-foreground" />
+                              <span
+                                className={`font-mono font-bold uppercase tracking-wider ${
+                                  status === "expired" || status === "critical"
+                                    ? "text-destructive"
+                                    : status === "warning"
+                                    ? "text-orange-500"
+                                    : "text-foreground"
+                                }`}
+                              >
+                                {expiryLabel}
+                              </span>
+                            </div>
+                          </div>
                         </div>
-                        <div
-                          className={`h-3 w-3 rounded-full ${
-                            status === "expired"
-                              ? "bg-destructive"
-                              : status === "critical"
-                              ? "bg-destructive"
-                              : status === "warning"
-                              ? "bg-muted-foreground"
-                              : "bg-foreground"
-                          }`}
-                        />
+
+                        {/* Status Badge */}
+                        <Badge
+                          variant={eatenConfig.badgeVariant}
+                          className="font-mono text-xs uppercase tracking-wider"
+                        >
+                          {eatenConfig.label}
+                        </Badge>
+                      </div>
+
+                      {/* Progress Bar */}
+                      <div className="space-y-2">
+                        <div className="flex items-center justify-between text-xs text-muted-foreground">
+                          <span className="font-mono">Eaten Status</span>
+                          <span className="font-mono">
+                            {eatenConfig.progress}%
+                          </span>
+                        </div>
+                        <div className="relative h-2 w-full overflow-hidden rounded-full bg-primary/20">
+                          <div
+                            className={`h-full transition-all ${eatenConfig.color}`}
+                            style={{ width: `${eatenConfig.progress}%` }}
+                          />
+                        </div>
+                      </div>
+
+                      {/* Controls Row */}
+                      <div className="flex items-center justify-between gap-3 pt-2 border-t border-border">
+                        <Select
+                          value={item.eatenStatus}
+                          onValueChange={(value: FridgeItem["eatenStatus"]) =>
+                            updateItemMutation.mutate({
+                              id: item.id,
+                              eatenStatus: value,
+                            })
+                          }
+                          disabled={updateItemMutation.isPending}
+                        >
+                          <SelectTrigger className="w-[160px] font-mono text-sm">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="fresh">Fresh</SelectItem>
+                            <SelectItem value="half eaten">
+                              Half Eaten
+                            </SelectItem>
+                            <SelectItem value="nearly eaten">
+                              Nearly Eaten
+                            </SelectItem>
+                            <SelectItem value="eaten">Eaten</SelectItem>
+                          </SelectContent>
+                        </Select>
+
                         <Button
                           variant="ghost"
                           size="icon"
