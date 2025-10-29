@@ -11,6 +11,8 @@ export const fridgeItems = pgTable('fridge_items', {
     updatedAt: timestamp().notNull(),
     createdBy: createdByEnum().notNull(),
     eatenStatus: eatenStatusEnum().notNull().default('fresh'),
+    openedDate: date(),
+    useWithinDays: integer(),
 });
 
 export type InsertFridgeItem = typeof fridgeItems.$inferInsert;

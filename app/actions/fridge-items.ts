@@ -13,9 +13,14 @@ export async function getItems() {
   }
 }
 
-export async function addItem(formData: { name: string; expiryDate: string }) {
+export async function addItem(formData: { 
+  name: string; 
+  expiryDate: string;
+  openedDate?: string;
+  useWithinDays?: number;
+}) {
   try {
-    const { name, expiryDate } = formData;
+    const { name, expiryDate, openedDate, useWithinDays } = formData;
 
     if (!name || !expiryDate) {
       return { success: false, error: "Name and expiryDate are required" };
@@ -29,6 +34,8 @@ export async function addItem(formData: { name: string; expiryDate: string }) {
       updatedAt: now,
       createdBy: "joe", // TODO: Get from session/auth
       eatenStatus: "fresh",
+      openedDate: openedDate || null,
+      useWithinDays: useWithinDays || null,
     };
 
     await addFridgeItem(item);
@@ -41,7 +48,11 @@ export async function addItem(formData: { name: string; expiryDate: string }) {
 
 export async function updateItem(
   id: number,
-  updates: { eatenStatus?: "fresh" | "half eaten" | "nearly eaten" | "eaten" }
+  updates: { 
+    eatenStatus?: "fresh" | "half eaten" | "nearly eaten" | "eaten";
+    openedDate?: string | null;
+    useWithinDays?: number | null;
+  }
 ) {
   try {
     await updateFridgeItem(id, updates);
