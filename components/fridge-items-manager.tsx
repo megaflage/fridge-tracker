@@ -8,7 +8,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card } from "@/components/ui/card";
-import { getItems, addItem } from "@/app/actions/fridge-items";
+import { getItems, addItem, deleteItem } from "@/app/actions/fridge-items";
+import { Trash2 } from "lucide-react";
 
 interface FridgeItem {
   id: number;
@@ -54,6 +55,23 @@ export function FridgeItemsManager() {
       setExpiryDate("");
     },
   });
+
+  const deleteItemMutation = useMutation({
+    mutationFn: async (id: number) => {
+      const result = await deleteItem(id);
+      if (!result.success) {
+        throw new Error(result.error || "Failed to delete item");
+      }
+      return result;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["fridge-items"] });
+    },
+  });
+
+  const isDeleting = (id: number) => {
+    return deleteItemMutation.isPending && deleteItemMutation.variables === id;
+  };
 
   const handleAddItem = (e: React.FormEvent) => {
     e.preventDefault();
@@ -227,6 +245,16 @@ export function FridgeItemsManager() {
                               : "bg-foreground"
                           }`}
                         />
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => deleteItemMutation.mutate(item.id)}
+                          disabled={isDeleting(item.id)}
+                          className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10"
+                          aria-label={`Delete ${item.name}`}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
                       </div>
                     </div>
                   </Card>
