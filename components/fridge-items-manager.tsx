@@ -241,7 +241,7 @@ export function FridgeItemsManager() {
   };
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen">
       I
       <div className="mx-auto max-w-4xl space-y-4 p-4 md:space-y-6 md:p-8 pb-8 md:pb-12">
         {/* Header */}
@@ -385,7 +385,7 @@ export function FridgeItemsManager() {
           </div>
 
           {isLoading ? (
-            <Card className="border border-dashed border-border bg-card p-8 md:p-12 shadow-sm">
+            <Card className="border border-dashed border-border bg-white dark:bg-card p-8 md:p-12 shadow-lg">
               <div className="text-center">
                 <p className="font-mono text-sm text-muted-foreground md:text-base">
                   Loading...
@@ -393,7 +393,7 @@ export function FridgeItemsManager() {
               </div>
             </Card>
           ) : error ? (
-            <Card className="border border-destructive bg-card p-8 md:p-12 shadow-sm">
+            <Card className="border border-destructive bg-white dark:bg-card p-8 md:p-12 shadow-lg">
               <div className="text-center">
                 <p className="font-mono text-sm text-destructive md:text-base">
                   Error loading items. Please try again.
@@ -401,7 +401,7 @@ export function FridgeItemsManager() {
               </div>
             </Card>
           ) : items.length === 0 ? (
-            <Card className="border border-dashed border-border bg-card p-8 md:p-12 shadow-sm">
+            <Card className="border border-dashed border-border bg-white dark:bg-card p-8 md:p-12 shadow-lg">
               <div className="text-center">
                 <p className="font-mono text-sm text-muted-foreground md:text-base">
                   No items tracked yet
@@ -465,24 +465,16 @@ export function FridgeItemsManager() {
                 const isWarning =
                   status === "warning" || useByStatus === "warning";
 
-                const borderColor = isUrgent
-                  ? "border-destructive border-2"
-                  : isWarning
-                  ? "border-orange-500 border-2"
-                  : "border-border";
+                const borderColor = "border-border";
 
-                const bgColor = isUrgent
-                  ? "bg-destructive/5"
-                  : isWarning
-                  ? "bg-orange-500/5"
-                  : "bg-card";
+                const bgColor = "bg-white dark:bg-card";
 
                 const isExpanded = expandedItems.has(item.id);
 
                 return (
                   <Card
                     key={item.id}
-                    className={`${borderColor} ${bgColor} p-4 md:p-5 shadow-sm transition-all`}
+                    className={`${borderColor} ${bgColor} p-4 md:p-5 shadow-lg transition-all`}
                   >
                     <div className="space-y-3">
                       {/* Main Item Display - Large and Glanceable */}

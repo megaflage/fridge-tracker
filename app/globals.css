@@ -119,7 +119,11 @@
   * {
     @apply border-border outline-ring/50;
   }
+  html {
+    @apply h-full m-0 p-0;
+  }
   body {
-    @apply bg-background text-foreground;
+    @apply min-h-full m-0 p-0 bg-gradient-to-br from-blue-100 via-purple-100 to-pink-100 dark:from-slate-950 dark:via-blue-900 dark:to-purple-900 text-foreground;
+    background-attachment: fixed;
   }
 }
