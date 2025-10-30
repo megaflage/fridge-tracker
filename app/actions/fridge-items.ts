@@ -6,7 +6,37 @@ import { InsertFridgeItem } from "@/app/src/db/schema";
 export async function getItems() {
   try {
     const items = await getFridgeItems();
-    return { success: true, data: items };
+    
+    // Calculate days until expiry and use-by on the server
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    
+    const itemsWithCalculations = items.map((item) => {
+      // Calculate days until expiry
+      const expiryDate = new Date(item.expiryDate);
+      expiryDate.setHours(0, 0, 0, 0);
+      const diffTimeExpiry = expiryDate.getTime() - today.getTime();
+      const daysUntilExpiry = Math.ceil(diffTimeExpiry / (1000 * 60 * 60 * 24));
+      
+      // Calculate days until use-by (only if item hasn't expired and has openedDate/useWithinDays)
+      let daysUntilUseBy: number | null = null;
+      if (daysUntilExpiry >= 0 && item.openedDate && item.useWithinDays) {
+        const openedDate = new Date(item.openedDate);
+        openedDate.setHours(0, 0, 0, 0);
+        const useByDate = new Date(openedDate);
+        useByDate.setDate(useByDate.getDate() + item.useWithinDays);
+        const diffTimeUseBy = useByDate.getTime() - today.getTime();
+        daysUntilUseBy = Math.ceil(diffTimeUseBy / (1000 * 60 * 60 * 24));
+      }
+      
+      return {
+        ...item,
+        daysUntilExpiry,
+        daysUntilUseBy,
+      };
+    });
+    
+    return { success: true, data: itemsWithCalculations };
   } catch (error) {
     console.error("Error fetching fridge items:", error);
     return { success: false, error: "Failed to fetch fridge items" };

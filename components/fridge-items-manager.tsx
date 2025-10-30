@@ -56,6 +56,8 @@ interface FridgeItem {
   eatenStatus: "fresh" | "half eaten" | "nearly eaten" | "eaten";
   openedDate: string | null;
   useWithinDays: number | null;
+  daysUntilExpiry: number;
+  daysUntilUseBy: number | null;
 }
 
 export function FridgeItemsManager() {
@@ -80,6 +82,10 @@ export function FridgeItemsManager() {
       }
       return result.data;
     },
+    // Refetch every hour to get updated day calculations from server
+    refetchInterval: 60 * 60 * 1000, // 1 hour in milliseconds
+    // Also refetch on window focus to ensure data is fresh
+    refetchOnWindowFocus: true,
   });
 
   const addItemMutation = useMutation({
@@ -160,37 +166,6 @@ export function FridgeItemsManager() {
         useWithinDays: useWithinDays || undefined,
       });
     }
-  };
-
-  const getDaysUntilExpiry = (expiryDate: string) => {
-    const today = new Date();
-    const expiry = new Date(expiryDate);
-    const diffTime = expiry.getTime() - today.getTime();
-    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-    return diffDays;
-  };
-
-  const getUseByDate = (
-    openedDate: string | null,
-    useWithinDays: number | null
-  ) => {
-    if (!openedDate || !useWithinDays) return null;
-    const opened = new Date(openedDate);
-    const useBy = new Date(opened);
-    useBy.setDate(useBy.getDate() + useWithinDays);
-    return useBy;
-  };
-
-  const getDaysUntilUseBy = (
-    openedDate: string | null,
-    useWithinDays: number | null
-  ) => {
-    const useByDate = getUseByDate(openedDate, useWithinDays);
-    if (!useByDate) return null;
-    const today = new Date();
-    const diffTime = useByDate.getTime() - today.getTime();
-    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-    return diffDays;
   };
 
   const getExpiryStatus = (daysUntilExpiry: number) => {
@@ -411,7 +386,9 @@ export function FridgeItemsManager() {
           ) : (
             <div className="space-y-4 md:space-y-4">
               {items.map((item) => {
-                const daysUntilExpiry = getDaysUntilExpiry(item.expiryDate);
+                // Use server-calculated values
+                const daysUntilExpiry = item.daysUntilExpiry;
+                const daysUntilUseBy = item.daysUntilUseBy;
                 const status = getExpiryStatus(daysUntilExpiry);
                 const expiryDateFormatted = new Date(
                   item.expiryDate
@@ -426,17 +403,7 @@ export function FridgeItemsManager() {
                     ? `Expired ${Math.abs(daysUntilExpiry)}d ago`
                     : daysUntilExpiry === 0
                     ? "Expires today"
-                    : `${daysUntilExpiry}d left`;
-
-                // Use-by date calculations
-                const daysUntilUseBy = getDaysUntilUseBy(
-                  item.openedDate,
-                  item.useWithinDays
-                );
-                const useByDate = getUseByDate(
-                  item.openedDate,
-                  item.useWithinDays
-                );
+                    : `Expires in ${daysUntilExpiry}d`;
 
                 const getUseByStatus = (days: number | null) => {
                   if (days === null) return null;
@@ -451,10 +418,10 @@ export function FridgeItemsManager() {
                   daysUntilUseBy === null
                     ? null
                     : daysUntilUseBy < 0
-                    ? `${Math.abs(daysUntilUseBy)}d overdue`
+                    ? `Use by: ${Math.abs(daysUntilUseBy)}d overdue`
                     : daysUntilUseBy === 0
-                    ? "Due today"
-                    : `${daysUntilUseBy}d left`;
+                    ? "Use by: Today"
+                    : `Use within ${daysUntilUseBy}d`;
 
                 // Determine border and background color based on both expiry and use-by status
                 const isUrgent =
@@ -485,7 +452,7 @@ export function FridgeItemsManager() {
                           </h3>
 
                           {/* Status Indicators - Large and Clear */}
-                          <div className="flex flex-wrap items-center gap-3 mb-2">
+                          <div className="flex flex-col gap-2 mb-2">
                             {/* Expiry Status */}
                             <div className="flex items-center gap-2">
                               {isUrgent && (
@@ -508,26 +475,22 @@ export function FridgeItemsManager() {
                             </div>
 
                             {/* Use-by Status if applicable */}
-                            {useByStatus &&
-                              (useByStatus === "expired" ||
-                                useByStatus === "critical" ||
-                                useByStatus === "warning") && (
-                                <div className="flex items-center gap-2">
-                                  <span className="text-muted-foreground">
-                                    •
-                                  </span>
-                                  <span
-                                    className={`font-mono text-base md:text-lg font-semibold ${
-                                      useByStatus === "expired" ||
-                                      useByStatus === "critical"
-                                        ? "text-destructive"
-                                        : "text-orange-500"
-                                    }`}
-                                  >
-                                    {useByLabel}
-                                  </span>
-                                </div>
-                              )}
+                            {useByLabel && (
+                              <div className="flex items-center gap-2">
+                                <span
+                                  className={`font-mono text-base md:text-lg font-semibold ${
+                                    useByStatus === "expired" ||
+                                    useByStatus === "critical"
+                                      ? "text-destructive"
+                                      : useByStatus === "warning"
+                                      ? "text-orange-500"
+                                      : "text-muted-foreground"
+                                  }`}
+                                >
+                                  {useByLabel}
+                                </span>
+                              </div>
+                            )}
                           </div>
 
                           {/* Date Display - Subtle */}
