@@ -170,8 +170,8 @@ export function FridgeItemsManager() {
 
   const getExpiryStatus = (daysUntilExpiry: number) => {
     if (daysUntilExpiry < 0) return "expired";
-    if (daysUntilExpiry <= 3) return "critical";
-    if (daysUntilExpiry <= 7) return "warning";
+    if (daysUntilExpiry === 0) return "expires-today";
+    if (daysUntilExpiry <= 3) return "warning";
     return "fresh";
   };
 
@@ -385,308 +385,352 @@ export function FridgeItemsManager() {
             </Card>
           ) : (
             <div className="space-y-4 md:space-y-4">
-              {items.map((item) => {
-                // Use server-calculated values
-                const daysUntilExpiry = item.daysUntilExpiry;
-                const daysUntilUseBy = item.daysUntilUseBy;
-                const status = getExpiryStatus(daysUntilExpiry);
-                const expiryDateFormatted = new Date(
-                  item.expiryDate
-                ).toLocaleDateString("en-US", {
-                  month: "short",
-                  day: "numeric",
-                });
+              {[...items]
+                .sort((a, b) => {
+                  // Get the most urgent date for each item (expiry or use-by, whichever is sooner)
+                  const getUrgentDays = (item: FridgeItem) => {
+                    const expiryDays = item.daysUntilExpiry;
+                    const useByDays = item.daysUntilUseBy;
 
-                const eatenConfig = getEatenStatusConfig(item.eatenStatus);
-                const expiryLabel =
-                  daysUntilExpiry < 0
-                    ? `Expired ${Math.abs(daysUntilExpiry)}d ago`
-                    : daysUntilExpiry === 0
-                    ? "Expires today"
-                    : `Expires in ${daysUntilExpiry}d`;
+                    // If expiry is expired or expires today, always prioritize expiry
+                    if (expiryDays <= 0) {
+                      return expiryDays;
+                    }
 
-                const getUseByStatus = (days: number | null) => {
-                  if (days === null) return null;
-                  if (days < 0) return "expired";
-                  if (days <= 1) return "critical";
-                  if (days <= 3) return "warning";
-                  return "fresh";
-                };
+                    // Otherwise, if use-by exists and is sooner than expiry, use it
+                    if (useByDays !== null && useByDays < expiryDays) {
+                      return useByDays;
+                    }
 
-                const useByStatus = getUseByStatus(daysUntilUseBy);
-                const useByLabel =
-                  daysUntilUseBy === null
-                    ? null
-                    : daysUntilUseBy < 0
-                    ? `Use by: ${Math.abs(daysUntilUseBy)}d overdue`
-                    : daysUntilUseBy === 0
-                    ? "Use by: Today"
-                    : `Use within ${daysUntilUseBy}d`;
+                    // Otherwise use expiry
+                    return expiryDays;
+                  };
 
-                // Determine border and background color based on both expiry and use-by status
-                const isUrgent =
-                  status === "expired" ||
-                  status === "critical" ||
-                  useByStatus === "expired" ||
-                  useByStatus === "critical";
-                const isWarning =
-                  status === "warning" || useByStatus === "warning";
+                  const aUrgent = getUrgentDays(a);
+                  const bUrgent = getUrgentDays(b);
 
-                const borderColor = "border-border";
+                  // Sort by most urgent first (lowest number first)
+                  return aUrgent - bUrgent;
+                })
+                .map((item) => {
+                  // Use server-calculated values
+                  const daysUntilExpiry = item.daysUntilExpiry;
+                  const daysUntilUseBy = item.daysUntilUseBy;
+                  const status = getExpiryStatus(daysUntilExpiry);
+                  const expiryDateFormatted = new Date(
+                    item.expiryDate
+                  ).toLocaleDateString("en-US", {
+                    month: "short",
+                    day: "numeric",
+                  });
 
-                const bgColor = "bg-white dark:bg-card";
+                  const eatenConfig = getEatenStatusConfig(item.eatenStatus);
+                  const expiryLabel =
+                    daysUntilExpiry < 0
+                      ? `Expired ${Math.abs(daysUntilExpiry)}d ago`
+                      : daysUntilExpiry === 0
+                      ? "Expires today"
+                      : `Expires in ${daysUntilExpiry}d`;
 
-                const isExpanded = expandedItems.has(item.id);
+                  const getUseByStatus = (days: number | null) => {
+                    if (days === null) return null;
+                    if (days < 0) return "expired";
+                    if (days <= 1) return "critical";
+                    if (days <= 3) return "warning";
+                    return "fresh";
+                  };
 
-                return (
-                  <Card
-                    key={item.id}
-                    className={`${borderColor} ${bgColor} p-4 md:p-5 shadow-lg transition-all`}
-                  >
-                    <div className="space-y-3">
-                      {/* Main Item Display - Large and Glanceable */}
-                      <div className="flex items-start justify-between gap-3">
-                        <div className="flex-1 min-w-0">
-                          <h3 className="font-mono text-3xl md:text-4xl font-bold mb-2 break-words">
-                            {item.name}
-                          </h3>
+                  const useByStatus = getUseByStatus(daysUntilUseBy);
+                  const useByLabel =
+                    daysUntilUseBy === null
+                      ? null
+                      : daysUntilUseBy < 0
+                      ? `Use by: ${Math.abs(daysUntilUseBy)}d overdue`
+                      : daysUntilUseBy === 0
+                      ? "Use by: Today"
+                      : `Use within ${daysUntilUseBy}d`;
 
-                          {/* Status Indicators - Large and Clear */}
-                          <div className="flex flex-col gap-2 mb-2">
-                            {/* Expiry Status */}
-                            <div className="flex items-center gap-2">
-                              {isUrgent && (
-                                <AlertTriangle className="h-5 w-5 text-destructive shrink-0" />
-                              )}
-                              {isWarning && !isUrgent && (
-                                <Clock className="h-5 w-5 text-orange-500 shrink-0" />
-                              )}
-                              <span
-                                className={`font-mono text-lg md:text-xl font-semibold ${
-                                  isUrgent
-                                    ? "text-destructive"
-                                    : isWarning
-                                    ? "text-orange-500"
-                                    : "text-foreground"
-                                }`}
-                              >
-                                {expiryLabel}
-                              </span>
-                            </div>
+                  // Determine border and background color based on both expiry and use-by status
+                  const isUrgent =
+                    status === "expired" ||
+                    useByStatus === "expired" ||
+                    useByStatus === "critical";
+                  const isWarning =
+                    status === "warning" ||
+                    status === "expires-today" ||
+                    useByStatus === "warning";
 
-                            {/* Use-by Status if applicable */}
-                            {useByLabel && (
+                  const borderColor = "border-border";
+
+                  const bgColor = "bg-white dark:bg-card";
+
+                  const isExpanded = expandedItems.has(item.id);
+
+                  return (
+                    <Card
+                      key={item.id}
+                      className={`${borderColor} ${bgColor} p-4 md:p-5 shadow-lg transition-all`}
+                    >
+                      <div className="space-y-3">
+                        {/* Main Item Display - Large and Glanceable */}
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="flex-1 min-w-0">
+                            <h3 className="font-mono text-3xl md:text-4xl font-bold mb-2 break-words">
+                              {item.name}
+                            </h3>
+
+                            {/* Status Indicators - Large and Clear */}
+                            <div className="flex flex-col gap-2 mb-2">
+                              {/* Expiry Status */}
                               <div className="flex items-center gap-2">
+                                {status === "expired" && (
+                                  <AlertTriangle className="h-5 w-5 text-destructive shrink-0" />
+                                )}
+                                {status === "expires-today" && (
+                                  <span className="text-orange-500 shrink-0">
+                                    ⚠️
+                                  </span>
+                                )}
+                                {status === "warning" && (
+                                  <Clock className="h-5 w-5 text-orange-500 shrink-0" />
+                                )}
+                                {status === "fresh" && (
+                                  <Clock className="h-5 w-5 text-green-500 shrink-0" />
+                                )}
                                 <span
-                                  className={`font-mono text-base md:text-lg font-semibold ${
-                                    useByStatus === "expired" ||
-                                    useByStatus === "critical"
+                                  className={`font-mono text-lg md:text-xl font-semibold ${
+                                    status === "expired"
                                       ? "text-destructive"
-                                      : useByStatus === "warning"
+                                      : status === "expires-today" ||
+                                        status === "warning"
                                       ? "text-orange-500"
-                                      : "text-muted-foreground"
+                                      : status === "fresh"
+                                      ? "text-green-600 dark:text-green-500"
+                                      : "text-foreground"
                                   }`}
                                 >
-                                  {useByLabel}
+                                  {expiryLabel}
                                 </span>
                               </div>
+
+                              {/* Use-by Status if applicable */}
+                              {useByLabel && (
+                                <div className="flex items-center gap-2">
+                                  <span
+                                    className={`font-mono text-base md:text-lg font-semibold ${
+                                      useByStatus === "expired" ||
+                                      useByStatus === "critical"
+                                        ? "text-destructive"
+                                        : useByStatus === "warning"
+                                        ? "text-orange-500"
+                                        : "text-muted-foreground"
+                                    }`}
+                                  >
+                                    {useByLabel}
+                                  </span>
+                                </div>
+                              )}
+                            </div>
+
+                            {/* Date Display - Subtle */}
+                            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                              <span className="font-mono">
+                                {expiryDateFormatted}
+                              </span>
+                            </div>
+                          </div>
+
+                          {/* Badge Stack - Top Right */}
+                          <div className="flex flex-col items-end gap-2 shrink-0">
+                            <Badge
+                              variant={eatenConfig.badgeVariant}
+                              className={`font-mono text-xs md:text-sm uppercase tracking-wider px-3 py-1.5 ${
+                                item.eatenStatus === "eaten" ? "opacity-60" : ""
+                              }`}
+                            >
+                              {eatenConfig.label}
+                            </Badge>
+                            {(useByStatus === "expired" ||
+                              useByStatus === "critical" ||
+                              useByStatus === "warning") && (
+                              <Badge
+                                variant={
+                                  useByStatus === "expired" ||
+                                  useByStatus === "critical"
+                                    ? "destructive"
+                                    : "outline"
+                                }
+                                className="font-mono text-xs md:text-sm uppercase tracking-wider px-3 py-1.5 border-2"
+                              >
+                                {useByStatus === "expired"
+                                  ? "⚠️ Expired"
+                                  : useByStatus === "critical"
+                                  ? "🚨 Due Now"
+                                  : "⏰ Soon"}
+                              </Badge>
                             )}
                           </div>
-
-                          {/* Date Display - Subtle */}
-                          <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                            <span className="font-mono">
-                              {expiryDateFormatted}
-                            </span>
-                          </div>
                         </div>
 
-                        {/* Badge Stack - Top Right */}
-                        <div className="flex flex-col items-end gap-2 shrink-0">
-                          <Badge
-                            variant={eatenConfig.badgeVariant}
-                            className={`font-mono text-xs md:text-sm uppercase tracking-wider px-3 py-1.5 ${
-                              item.eatenStatus === "eaten" ? "opacity-60" : ""
-                            }`}
-                          >
-                            {eatenConfig.label}
-                          </Badge>
-                          {(useByStatus === "expired" ||
-                            useByStatus === "critical" ||
-                            useByStatus === "warning") && (
-                            <Badge
-                              variant={
-                                useByStatus === "expired" ||
-                                useByStatus === "critical"
-                                  ? "destructive"
-                                  : "outline"
-                              }
-                              className="font-mono text-xs md:text-sm uppercase tracking-wider px-3 py-1.5 border-2"
-                            >
-                              {useByStatus === "expired"
-                                ? "⚠️ Expired"
-                                : useByStatus === "critical"
-                                ? "🚨 Due Now"
-                                : "⏰ Soon"}
-                            </Badge>
-                          )}
-                        </div>
-                      </div>
-
-                      {/* Controls Row - Simplified */}
-                      <Collapsible
-                        open={isExpanded}
-                        onOpenChange={(open) => {
-                          const newSet = new Set(expandedItems);
-                          if (open) {
-                            newSet.add(item.id);
-                          } else {
-                            newSet.delete(item.id);
-                          }
-                          setExpandedItems(newSet);
-                        }}
-                      >
-                        <div className="flex items-center justify-between gap-3 pt-3 border-t border-border/50">
-                          <div className="flex items-center gap-2 flex-1">
-                            <Select
-                              value={item.eatenStatus}
-                              onValueChange={(
-                                value: FridgeItem["eatenStatus"]
-                              ) =>
-                                updateItemMutation.mutate({
-                                  id: item.id,
-                                  eatenStatus: value,
-                                })
-                              }
-                              disabled={updateItemMutation.isPending}
-                            >
-                              <SelectTrigger className="w-[140px] md:w-[160px] font-mono text-sm h-10">
-                                <SelectValue />
-                              </SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value="fresh">Fresh</SelectItem>
-                                <SelectItem value="half eaten">
-                                  Half Eaten
-                                </SelectItem>
-                                <SelectItem value="nearly eaten">
-                                  Nearly Eaten
-                                </SelectItem>
-                                <SelectItem value="eaten">Eaten</SelectItem>
-                              </SelectContent>
-                            </Select>
-
-                            <CollapsibleTrigger asChild>
-                              <Button
-                                type="button"
-                                variant="ghost"
-                                size="sm"
-                                className="h-10 px-3 font-mono text-sm text-muted-foreground hover:text-foreground"
+                        {/* Controls Row - Simplified */}
+                        <Collapsible
+                          open={isExpanded}
+                          onOpenChange={(open) => {
+                            const newSet = new Set(expandedItems);
+                            if (open) {
+                              newSet.add(item.id);
+                            } else {
+                              newSet.delete(item.id);
+                            }
+                            setExpandedItems(newSet);
+                          }}
+                        >
+                          <div className="flex items-center justify-between gap-3 pt-3 border-t border-border/50">
+                            <div className="flex items-center gap-2 flex-1">
+                              <Select
+                                value={item.eatenStatus}
+                                onValueChange={(
+                                  value: FridgeItem["eatenStatus"]
+                                ) =>
+                                  updateItemMutation.mutate({
+                                    id: item.id,
+                                    eatenStatus: value,
+                                  })
+                                }
+                                disabled={updateItemMutation.isPending}
                               >
-                                {isExpanded ? (
-                                  <>
-                                    Less <ChevronUp className="ml-1 h-4 w-4" />
-                                  </>
-                                ) : (
-                                  <>
-                                    More{" "}
-                                    <ChevronDown className="ml-1 h-4 w-4" />
-                                  </>
-                                )}
-                              </Button>
-                            </CollapsibleTrigger>
-                          </div>
+                                <SelectTrigger className="w-[140px] md:w-[160px] font-mono text-sm h-10">
+                                  <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="fresh">Fresh</SelectItem>
+                                  <SelectItem value="half eaten">
+                                    Half Eaten
+                                  </SelectItem>
+                                  <SelectItem value="nearly eaten">
+                                    Nearly Eaten
+                                  </SelectItem>
+                                  <SelectItem value="eaten">Eaten</SelectItem>
+                                </SelectContent>
+                              </Select>
 
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => deleteItemMutation.mutate(item.id)}
-                            disabled={isDeleting(item.id)}
-                            className="h-10 w-10 text-destructive hover:text-destructive hover:bg-destructive/10 shrink-0"
-                            aria-label={`Delete ${item.name}`}
-                          >
-                            <Trash2 className="h-5 w-5" />
-                          </Button>
-                        </div>
-
-                        <CollapsibleContent className="pt-4 space-y-4">
-                          {/* Opened Toggle - Simple Button */}
-                          <div className="flex items-center justify-between p-3 rounded-lg border bg-muted/50">
-                            <div className="flex items-center gap-3">
-                              <PackageOpen className="h-5 w-5 text-muted-foreground" />
-                              <div>
-                                <Label className="font-mono text-sm font-semibold">
-                                  Open Status
-                                </Label>
-                                <p className="text-xs text-muted-foreground font-mono">
-                                  {item.openedDate ? "Opened" : "Not opened"}
-                                </p>
-                              </div>
+                              <CollapsibleTrigger asChild>
+                                <Button
+                                  type="button"
+                                  variant="ghost"
+                                  size="sm"
+                                  className="h-10 px-3 font-mono text-sm text-muted-foreground hover:text-foreground"
+                                >
+                                  {isExpanded ? (
+                                    <>
+                                      Less{" "}
+                                      <ChevronUp className="ml-1 h-4 w-4" />
+                                    </>
+                                  ) : (
+                                    <>
+                                      More{" "}
+                                      <ChevronDown className="ml-1 h-4 w-4" />
+                                    </>
+                                  )}
+                                </Button>
+                              </CollapsibleTrigger>
                             </div>
+
                             <Button
-                              type="button"
-                              variant={item.openedDate ? "default" : "outline"}
-                              size="sm"
-                              onClick={() => {
-                                const today = new Date()
-                                  .toISOString()
-                                  .split("T")[0];
-                                updateItemMutation.mutate({
-                                  id: item.id,
-                                  openedDate: item.openedDate ? null : today,
-                                  // Clear use within days if unopening
-                                  useWithinDays: item.openedDate
-                                    ? null
-                                    : item.useWithinDays,
-                                });
-                              }}
-                              disabled={updateItemMutation.isPending}
-                              className="font-mono text-sm"
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => deleteItemMutation.mutate(item.id)}
+                              disabled={isDeleting(item.id)}
+                              className="h-10 w-10 text-destructive hover:text-destructive hover:bg-destructive/10 shrink-0"
+                              aria-label={`Delete ${item.name}`}
                             >
-                              {item.openedDate ? "Mark Closed" : "Mark Opened"}
+                              <Trash2 className="h-5 w-5" />
                             </Button>
                           </div>
 
-                          {/* Use Within Days - Only show if opened */}
-                          {item.openedDate && (
-                            <div className="space-y-2">
-                              <Label className="font-mono text-xs uppercase tracking-wider text-muted-foreground">
-                                Use Within
-                              </Label>
-                              <div className="flex flex-wrap gap-2">
-                                {[3, 5, 7, 10].map((days) => (
-                                  <Button
-                                    key={days}
-                                    type="button"
-                                    variant={
-                                      item.useWithinDays === days
-                                        ? "default"
-                                        : "outline"
-                                    }
-                                    size="sm"
-                                    onClick={() =>
-                                      updateItemMutation.mutate({
-                                        id: item.id,
-                                        useWithinDays:
-                                          item.useWithinDays === days
-                                            ? null
-                                            : days,
-                                      })
-                                    }
-                                    disabled={updateItemMutation.isPending}
-                                    className="font-mono text-sm"
-                                  >
-                                    {days} days
-                                  </Button>
-                                ))}
+                          <CollapsibleContent className="pt-4 space-y-4">
+                            {/* Opened Toggle - Simple Button */}
+                            <div className="flex items-center justify-between p-3 rounded-lg border bg-muted/50">
+                              <div className="flex items-center gap-3">
+                                <PackageOpen className="h-5 w-5 text-muted-foreground" />
+                                <div>
+                                  <Label className="font-mono text-sm font-semibold">
+                                    Open Status
+                                  </Label>
+                                  <p className="text-xs text-muted-foreground font-mono">
+                                    {item.openedDate ? "Opened" : "Not opened"}
+                                  </p>
+                                </div>
                               </div>
+                              <Button
+                                type="button"
+                                variant={
+                                  item.openedDate ? "default" : "outline"
+                                }
+                                size="sm"
+                                onClick={() => {
+                                  const today = new Date()
+                                    .toISOString()
+                                    .split("T")[0];
+                                  updateItemMutation.mutate({
+                                    id: item.id,
+                                    openedDate: item.openedDate ? null : today,
+                                    // Clear use within days if unopening
+                                    useWithinDays: item.openedDate
+                                      ? null
+                                      : item.useWithinDays,
+                                  });
+                                }}
+                                disabled={updateItemMutation.isPending}
+                                className="font-mono text-sm"
+                              >
+                                {item.openedDate
+                                  ? "Mark Closed"
+                                  : "Mark Opened"}
+                              </Button>
                             </div>
-                          )}
-                        </CollapsibleContent>
-                      </Collapsible>
-                    </div>
-                  </Card>
-                );
-              })}
+
+                            {/* Use Within Days - Only show if opened */}
+                            {item.openedDate && (
+                              <div className="space-y-2">
+                                <Label className="font-mono text-xs uppercase tracking-wider text-muted-foreground">
+                                  Use Within
+                                </Label>
+                                <div className="flex flex-wrap gap-2">
+                                  {[3, 5, 7, 10].map((days) => (
+                                    <Button
+                                      key={days}
+                                      type="button"
+                                      variant={
+                                        item.useWithinDays === days
+                                          ? "default"
+                                          : "outline"
+                                      }
+                                      size="sm"
+                                      onClick={() =>
+                                        updateItemMutation.mutate({
+                                          id: item.id,
+                                          useWithinDays:
+                                            item.useWithinDays === days
+                                              ? null
+                                              : days,
+                                        })
+                                      }
+                                      disabled={updateItemMutation.isPending}
+                                      className="font-mono text-sm"
+                                    >
+                                      {days} days
+                                    </Button>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
+                          </CollapsibleContent>
+                        </Collapsible>
+                      </div>
+                    </Card>
+                  );
+                })}
             </div>
           )}
         </div>
