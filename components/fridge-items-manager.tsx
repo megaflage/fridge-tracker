@@ -23,7 +23,12 @@ import {
   deleteItem,
   updateItem,
 } from "@/app/actions/fridge-items";
-import { Trash2, Clock, Calendar, PackageOpen } from "lucide-react";
+import { Trash2, ChevronDown, ChevronUp } from "lucide-react";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
 
 interface FridgeItem {
   id: number;
@@ -43,6 +48,8 @@ export function FridgeItemsManager() {
   const [expiryDate, setExpiryDate] = useState("");
   const [openedDate, setOpenedDate] = useState("");
   const [useWithinDays, setUseWithinDays] = useState("");
+  const [showOptionalFields, setShowOptionalFields] = useState(false);
+  const [expandedItems, setExpandedItems] = useState<Set<number>>(new Set());
 
   const {
     data: items = [],
@@ -216,26 +223,26 @@ export function FridgeItemsManager() {
   };
 
   return (
-    <div className="min-h-screen bg-background p-6 md:p-12">
-      <div className="mx-auto max-w-4xl space-y-12">
+    <div className="min-h-screen bg-background">
+      <div className="mx-auto max-w-4xl space-y-4 p-4 md:space-y-6 md:p-8">
         {/* Header */}
-        <div className="space-y-2">
-          <h1 className="font-mono text-4xl font-bold tracking-tight text-balance md:text-5xl">
+        <div className="space-y-1 pb-3">
+          <h1 className="font-mono text-2xl font-bold tracking-tight">
             Fridge Inventory
           </h1>
-          <p className="text-lg text-muted-foreground">
+          <p className="text-xs text-muted-foreground">
             Track expiry dates. Reduce waste.
           </p>
         </div>
 
         {/* Add Item Form */}
-        <Card className="border-2 border-border bg-card p-6 md:p-8">
-          <form onSubmit={handleAddItem} className="space-y-6">
-            <div className="grid gap-6 md:grid-cols-2">
-              <div className="space-y-2">
+        <Card className="border border-border bg-card shadow-sm p-4 md:p-6">
+          <form onSubmit={handleAddItem} className="space-y-3">
+            <div className="grid gap-3 md:grid-cols-2">
+              <div className="space-y-1.5">
                 <Label
                   htmlFor="item-name"
-                  className="text-sm font-mono uppercase tracking-wider"
+                  className="text-xs font-mono uppercase tracking-wider"
                 >
                   Item Name
                 </Label>
@@ -244,14 +251,14 @@ export function FridgeItemsManager() {
                   placeholder="Enter item name"
                   value={itemName}
                   onChange={(e) => setItemName(e.target.value)}
-                  className="border-2 bg-background font-mono"
+                  className="border bg-background font-mono"
                   required
                 />
               </div>
-              <div className="space-y-2">
+              <div className="space-y-1.5">
                 <Label
                   htmlFor="expiry-date"
-                  className="text-sm font-mono uppercase tracking-wider"
+                  className="text-xs font-mono uppercase tracking-wider"
                 >
                   Expiry Date
                 </Label>
@@ -260,51 +267,78 @@ export function FridgeItemsManager() {
                   type="date"
                   value={expiryDate}
                   onChange={(e) => setExpiryDate(e.target.value)}
-                  className="border-2 bg-background font-mono"
+                  className="border bg-background font-mono"
                   required
                 />
               </div>
-              <div className="space-y-2">
-                <Label
-                  htmlFor="opened-date"
-                  className="text-sm font-mono uppercase tracking-wider"
-                >
-                  Opened Date (Optional)
-                </Label>
-                <Input
-                  id="opened-date"
-                  type="date"
-                  value={openedDate}
-                  onChange={(e) => setOpenedDate(e.target.value)}
-                  className="border-2 bg-background font-mono"
-                  placeholder="When was this opened?"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label
-                  htmlFor="use-within-days"
-                  className="text-sm font-mono uppercase tracking-wider"
-                >
-                  Use Within Days (Optional)
-                </Label>
-                <Input
-                  id="use-within-days"
-                  type="number"
-                  min="1"
-                  value={useWithinDays}
-                  onChange={(e) => setUseWithinDays(e.target.value)}
-                  className="border-2 bg-background font-mono"
-                  placeholder="e.g., 3, 5, 7 days"
-                />
-                <p className="text-xs text-muted-foreground font-mono">
-                  Days to use within after opening
-                </p>
-              </div>
             </div>
+
+            <Collapsible
+              open={showOptionalFields}
+              onOpenChange={setShowOptionalFields}
+            >
+              <CollapsibleTrigger asChild>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  className="text-xs font-mono text-muted-foreground hover:text-foreground -ml-2 h-8"
+                >
+                  {showOptionalFields ? (
+                    <>
+                      Hide optional fields{" "}
+                      <ChevronUp className="ml-1 h-3 w-3" />
+                    </>
+                  ) : (
+                    <>
+                      Show optional fields{" "}
+                      <ChevronDown className="ml-1 h-3 w-3" />
+                    </>
+                  )}
+                </Button>
+              </CollapsibleTrigger>
+              <CollapsibleContent className="space-y-3">
+                <div className="grid gap-3 md:grid-cols-2">
+                  <div className="space-y-1.5">
+                    <Label
+                      htmlFor="opened-date"
+                      className="text-xs font-mono uppercase tracking-wider"
+                    >
+                      Opened Date
+                    </Label>
+                    <Input
+                      id="opened-date"
+                      type="date"
+                      value={openedDate}
+                      onChange={(e) => setOpenedDate(e.target.value)}
+                      className="border bg-background font-mono"
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label
+                      htmlFor="use-within-days"
+                      className="text-xs font-mono uppercase tracking-wider"
+                    >
+                      Use Within Days
+                    </Label>
+                    <Input
+                      id="use-within-days"
+                      type="number"
+                      min="1"
+                      value={useWithinDays}
+                      onChange={(e) => setUseWithinDays(e.target.value)}
+                      className="border bg-background font-mono"
+                      placeholder="e.g., 3, 5, 7"
+                    />
+                  </div>
+                </div>
+              </CollapsibleContent>
+            </Collapsible>
+
             <Button
               type="submit"
               disabled={addItemMutation.isPending}
-              className="w-full border-2 border-primary font-mono uppercase tracking-wider md:w-auto"
+              className="w-full font-mono uppercase tracking-wider text-sm"
             >
               {addItemMutation.isPending ? "Adding..." : "Add Item"}
             </Button>
@@ -312,40 +346,42 @@ export function FridgeItemsManager() {
         </Card>
 
         {/* Items List */}
-        <div className="space-y-6">
-          <div className="flex items-center justify-between border-b-2 border-border pb-4">
-            <h2 className="font-mono text-2xl font-bold uppercase tracking-wider">
+        <div className="space-y-3">
+          <div className="flex items-center justify-between pb-2">
+            <h2 className="font-mono text-lg font-semibold uppercase tracking-wider">
               Items
             </h2>
-            <span className="font-mono text-sm text-muted-foreground">
-              {items.length} total
+            <span className="font-mono text-xs text-muted-foreground">
+              {items.length}
             </span>
           </div>
 
           {isLoading ? (
-            <Card className="border-2 border-dashed border-border bg-card p-12">
+            <Card className="border border-dashed border-border bg-card p-8 md:p-12 shadow-sm">
               <div className="text-center">
-                <p className="font-mono text-muted-foreground">Loading...</p>
+                <p className="font-mono text-sm text-muted-foreground md:text-base">
+                  Loading...
+                </p>
               </div>
             </Card>
           ) : error ? (
-            <Card className="border-2 border-destructive bg-card p-12">
+            <Card className="border border-destructive bg-card p-8 md:p-12 shadow-sm">
               <div className="text-center">
-                <p className="font-mono text-destructive">
+                <p className="font-mono text-sm text-destructive md:text-base">
                   Error loading items. Please try again.
                 </p>
               </div>
             </Card>
           ) : items.length === 0 ? (
-            <Card className="border-2 border-dashed border-border bg-card p-12">
+            <Card className="border border-dashed border-border bg-card p-8 md:p-12 shadow-sm">
               <div className="text-center">
-                <p className="font-mono text-muted-foreground">
+                <p className="font-mono text-sm text-muted-foreground md:text-base">
                   No items tracked yet
                 </p>
               </div>
             </Card>
           ) : (
-            <div className="space-y-3">
+            <div className="space-y-3 md:space-y-4">
               {items.map((item) => {
                 const daysUntilExpiry = getDaysUntilExpiry(item.expiryDate);
                 const status = getExpiryStatus(daysUntilExpiry);
@@ -411,181 +447,166 @@ export function FridgeItemsManager() {
                     ? "border-orange-500"
                     : "border-border";
 
+                const isExpanded = expandedItems.has(item.id);
+
                 return (
                   <Card
                     key={item.id}
-                    className={`border-2 bg-card p-5 transition-all hover:border-foreground ${borderColor}`}
+                    className={`border bg-card p-3 shadow-sm transition-all hover:shadow ${borderColor}`}
                   >
-                    <div className="space-y-4">
+                    <div className="space-y-2">
                       {/* Header Row */}
-                      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-                        <div className="flex-1 space-y-2">
-                          <h3 className="font-mono text-xl font-bold">
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="flex-1 min-w-0">
+                          <h3 className="font-mono text-base font-semibold">
                             {item.name}
                           </h3>
-
-                          {/* Expiry Info */}
-                          <div className="flex flex-wrap items-center gap-3 text-sm">
-                            <div className="flex items-center gap-1.5 text-muted-foreground">
-                              <Calendar className="h-4 w-4" />
-                              <span className="font-mono">
-                                {expiryDateFormatted}
-                              </span>
-                            </div>
-                            <div className="flex items-center gap-1.5">
-                              <Clock className="h-4 w-4 text-muted-foreground" />
-                              <span
-                                className={`font-mono font-bold uppercase tracking-wider ${
-                                  status === "expired" || status === "critical"
-                                    ? "text-destructive"
-                                    : status === "warning"
-                                    ? "text-orange-500"
-                                    : "text-foreground"
-                                }`}
-                              >
-                                {expiryLabel}
-                              </span>
-                            </div>
-                            {item.openedDate && item.useWithinDays && (
-                              <>
-                                <div className="flex items-center gap-1.5 text-muted-foreground">
-                                  <PackageOpen className="h-4 w-4" />
-                                  <span className="font-mono">
-                                    Opened:{" "}
-                                    {new Date(
-                                      item.openedDate
-                                    ).toLocaleDateString("en-US", {
-                                      month: "short",
-                                      day: "numeric",
-                                    })}
+                          <div className="flex flex-wrap items-center gap-2 mt-1 text-xs text-muted-foreground">
+                            <span className="font-mono">
+                              {expiryDateFormatted}
+                            </span>
+                            <span className="text-muted-foreground">•</span>
+                            <span
+                              className={`font-mono font-medium ${
+                                status === "expired" || status === "critical"
+                                  ? "text-destructive"
+                                  : status === "warning"
+                                  ? "text-orange-500"
+                                  : ""
+                              }`}
+                            >
+                              {expiryLabel}
+                            </span>
+                            {item.openedDate &&
+                              item.useWithinDays &&
+                              useByLabel && (
+                                <>
+                                  <span className="text-muted-foreground">
+                                    •
                                   </span>
-                                </div>
-                                {useByDateFormatted && (
-                                  <div className="flex items-center gap-1.5">
-                                    <Clock className="h-4 w-4 text-muted-foreground" />
-                                    <span
-                                      className={`font-mono font-bold uppercase tracking-wider ${
-                                        useByStatus === "expired" ||
-                                        useByStatus === "critical"
-                                          ? "text-destructive"
-                                          : useByStatus === "warning"
-                                          ? "text-orange-500"
-                                          : "text-foreground"
-                                      }`}
-                                    >
-                                      {useByLabel}
-                                    </span>
-                                  </div>
-                                )}
-                              </>
-                            )}
+                                  <span
+                                    className={`font-mono font-medium ${
+                                      useByStatus === "expired" ||
+                                      useByStatus === "critical"
+                                        ? "text-destructive"
+                                        : useByStatus === "warning"
+                                        ? "text-orange-500"
+                                        : ""
+                                    }`}
+                                  >
+                                    {useByLabel}
+                                  </span>
+                                </>
+                              )}
                           </div>
                         </div>
-
-                        {/* Status Badges */}
-                        <div className="flex flex-col gap-2 sm:flex-row sm:items-start">
+                        <div className="flex items-center gap-2 shrink-0">
                           <Badge
                             variant={eatenConfig.badgeVariant}
-                            className="font-mono text-xs uppercase tracking-wider"
+                            className="font-mono text-[10px] uppercase tracking-wider px-1.5 py-0.5"
                           >
                             {eatenConfig.label}
                           </Badge>
-                          {useByStatus && (
+                          {(useByStatus === "expired" ||
+                            useByStatus === "critical" ||
+                            useByStatus === "warning") && (
                             <Badge
                               variant={
                                 useByStatus === "expired" ||
                                 useByStatus === "critical"
                                   ? "destructive"
-                                  : useByStatus === "warning"
-                                  ? "outline"
-                                  : "secondary"
+                                  : "outline"
                               }
-                              className={`font-mono text-xs uppercase tracking-wider ${
-                                useByStatus === "expired" ||
-                                useByStatus === "critical"
-                                  ? "border-destructive"
-                                  : ""
-                              }`}
+                              className="font-mono text-[10px] uppercase tracking-wider px-1.5 py-0.5"
                             >
+                              Use-by{" "}
                               {useByStatus === "expired"
-                                ? "Use-by Passed"
+                                ? "Passed"
                                 : useByStatus === "critical"
-                                ? "Use-by Today/Tomorrow"
-                                : useByStatus === "warning"
-                                ? "Use-by Soon"
-                                : ""}
+                                ? "Due"
+                                : "Soon"}
                             </Badge>
                           )}
-                          {item.openedDate && !item.useWithinDays && (
-                            <Badge
-                              variant="outline"
-                              className="font-mono text-xs uppercase tracking-wider"
-                            >
-                              Opened
-                            </Badge>
-                          )}
-                        </div>
-                      </div>
-
-                      {/* Progress Bar */}
-                      <div className="space-y-2">
-                        <div className="flex items-center justify-between text-xs text-muted-foreground">
-                          <span className="font-mono">Eaten Status</span>
-                          <span className="font-mono">
-                            {eatenConfig.progress}%
-                          </span>
-                        </div>
-                        <div className="relative h-2 w-full overflow-hidden rounded-full bg-primary/20">
-                          <div
-                            className={`h-full transition-all ${eatenConfig.color}`}
-                            style={{ width: `${eatenConfig.progress}%` }}
-                          />
                         </div>
                       </div>
 
                       {/* Controls Row */}
-                      <div className="flex flex-col gap-3 pt-2 border-t border-border">
-                        <div className="flex items-center justify-between gap-3">
-                          <Select
-                            value={item.eatenStatus}
-                            onValueChange={(value: FridgeItem["eatenStatus"]) =>
-                              updateItemMutation.mutate({
-                                id: item.id,
-                                eatenStatus: value,
-                              })
-                            }
-                            disabled={updateItemMutation.isPending}
-                          >
-                            <SelectTrigger className="w-[160px] font-mono text-sm">
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="fresh">Fresh</SelectItem>
-                              <SelectItem value="half eaten">
-                                Half Eaten
-                              </SelectItem>
-                              <SelectItem value="nearly eaten">
-                                Nearly Eaten
-                              </SelectItem>
-                              <SelectItem value="eaten">Eaten</SelectItem>
-                            </SelectContent>
-                          </Select>
+                      <Collapsible
+                        open={isExpanded}
+                        onOpenChange={(open) => {
+                          const newSet = new Set(expandedItems);
+                          if (open) {
+                            newSet.add(item.id);
+                          } else {
+                            newSet.delete(item.id);
+                          }
+                          setExpandedItems(newSet);
+                        }}
+                      >
+                        <div className="flex items-center justify-between gap-2 pt-2 border-t border-border/50">
+                          <div className="flex items-center gap-2 flex-1">
+                            <Select
+                              value={item.eatenStatus}
+                              onValueChange={(
+                                value: FridgeItem["eatenStatus"]
+                              ) =>
+                                updateItemMutation.mutate({
+                                  id: item.id,
+                                  eatenStatus: value,
+                                })
+                              }
+                              disabled={updateItemMutation.isPending}
+                            >
+                              <SelectTrigger className="w-[140px] font-mono text-xs h-8">
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="fresh">Fresh</SelectItem>
+                                <SelectItem value="half eaten">
+                                  Half Eaten
+                                </SelectItem>
+                                <SelectItem value="nearly eaten">
+                                  Nearly Eaten
+                                </SelectItem>
+                                <SelectItem value="eaten">Eaten</SelectItem>
+                              </SelectContent>
+                            </Select>
+
+                            <CollapsibleTrigger asChild>
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="sm"
+                                className="h-8 px-2 font-mono text-xs text-muted-foreground hover:text-foreground"
+                              >
+                                {isExpanded ? (
+                                  <>
+                                    Less <ChevronUp className="ml-1 h-3 w-3" />
+                                  </>
+                                ) : (
+                                  <>
+                                    More{" "}
+                                    <ChevronDown className="ml-1 h-3 w-3" />
+                                  </>
+                                )}
+                              </Button>
+                            </CollapsibleTrigger>
+                          </div>
 
                           <Button
                             variant="ghost"
                             size="icon"
                             onClick={() => deleteItemMutation.mutate(item.id)}
                             disabled={isDeleting(item.id)}
-                            className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10"
+                            className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10 shrink-0"
                             aria-label={`Delete ${item.name}`}
                           >
                             <Trash2 className="h-4 w-4" />
                           </Button>
                         </div>
 
-                        {/* Opened Date Controls */}
-                        <div className="flex flex-wrap items-center gap-3 text-sm">
-                          <div className="flex items-center gap-2">
+                        <CollapsibleContent className="pt-2 space-y-2">
+                          <div className="grid grid-cols-[90px_1fr] gap-2 items-center">
                             <Label
                               htmlFor={`opened-date-${item.id}`}
                               className="font-mono text-xs text-muted-foreground whitespace-nowrap"
@@ -602,12 +623,12 @@ export function FridgeItemsManager() {
                                   openedDate: e.target.value || null,
                                 })
                               }
-                              className="h-8 border-2 bg-background font-mono text-xs w-[140px]"
+                              className="h-8 border bg-background font-mono text-xs"
                               placeholder="Not opened"
                             />
                           </div>
                           {item.openedDate && (
-                            <div className="flex items-center gap-2">
+                            <div className="grid grid-cols-[90px_80px_auto] gap-2 items-center">
                               <Label
                                 htmlFor={`use-within-${item.id}`}
                                 className="font-mono text-xs text-muted-foreground whitespace-nowrap"
@@ -627,7 +648,7 @@ export function FridgeItemsManager() {
                                       : null,
                                   })
                                 }
-                                className="h-8 border-2 bg-background font-mono text-xs w-[80px]"
+                                className="h-8 border bg-background font-mono text-xs"
                                 placeholder="Days"
                               />
                               <span className="font-mono text-xs text-muted-foreground">
@@ -635,8 +656,8 @@ export function FridgeItemsManager() {
                               </span>
                             </div>
                           )}
-                        </div>
-                      </div>
+                        </CollapsibleContent>
+                      </Collapsible>
                     </div>
                   </Card>
                 );
